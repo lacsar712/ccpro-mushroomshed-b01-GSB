@@ -44,16 +44,21 @@ docker compose up --build
 
 1. **Auth**：JWT 登录（OAuth2 表单或 JSON），`/api/auth/login`、`/api/auth/me`，`Authorization: Bearer`
 2. **Shed 菇房**：`name`、`location`、`notes`
-3. **Room 出菇室**：`shedId`、`roomCode`、`species`、`capacityBags`、`status(fruiting|idle|sanitize)`；同菇房 `roomCode` 唯一
-4. **ClimateLog 环境记录**：`roomId`、`recordedAt`、`tempC`、`humidityPct`、`co2Ppm`、`notes`；`humidityPct ∈ [1,100]`，否则 **400**
-5. **FlushHarvest 采收**：`roomId`、`harvestedAt`、`flushNo(≥1)`、`weightKg`、`grade(A|B|C)`、`operatorName`；`weightKg > 0`，否则 **400**
-6. **Dashboard**：`shedTotal`、`fruitingRoomCount`、`climateLast24h`、`harvestKgLast7d`
+3. **Room 出菇室**：`shedId`、`roomCode`、`species`、`capacityBags`、`status(fruiting|idle|sanitize)`；同菇房 `roomCode` 唯一；`PATCH /api/rooms/:id/status` 变更状态
+4. **Cooldown 冷却**：出菇室**离开 `fruiting`** 时自动登记一条冷却记录：`roomId`、`leftAt`（离开 fruiting 的时刻）、`coolUntil = leftAt + 36 小时`、`waivedAt`（可空）、`waiveReason`（可空）。`coolUntil` 未到且未豁免时，把状态写回 `fruiting` 会得到 **409**（响应正文带 `coolUntil`，状态保持不动）。豁免仅 **admin（场长）** 可用：`POST /api/cooldowns/:id/waive`，`reason` 去除空白后至少 4 个字（否则 400）；`fruiter` 调用得到 **403**。`GET /api/rooms` 每行带 `coolUntil` 与 `cooling`（`cooling=true` 表示未到点且未豁免）；`GET /api/dashboard/cooling` 返回 `total` 与 `byShed`，`total` 等于 `cooling` 为真的出菇室数量，两处共用同一份冷却判定逻辑
+5. **ClimateLog 环境记录**：`roomId`、`recordedAt`、`tempC`、`humidityPct`、`co2Ppm`、`notes`；`humidityPct ∈ [1,100]`，否则 **400**
+6. **FlushHarvest 采收**：`roomId`、`harvestedAt`、`flushNo(≥1)`、`weightKg`、`grade(A|B|C)`、`operatorName`；`weightKg > 0`，否则 **400**
+7. **Dashboard**：`shedTotal`、`fruitingRoomCount`、`climateLast24h`、`harvestKgLast7d`；冷却统计见 `/api/dashboard/cooling`
 
-各实体 API：`GET/POST` 列表与创建、`DELETE` 按 ID 删除。
+各实体 API：`GET/POST` 列表与创建、`DELETE` 按 ID 删除；出菇室另有 `PATCH /api/rooms/:id/status`，冷却另有 `POST /api/cooldowns/:id/waive`。
+
+种子数据中：`R-02` 仍在冷却（`coolUntil` 未到），`V-02` 的冷却已过点。
 
 ## 前端页面
 
 Login · Dashboard · Sheds · Rooms · ClimateLogs · FlushHarvests（侧边栏布局）
+
+出菇室页每行展示 `coolUntil` 与「冷却中」标记，可直接切换状态（被冷却拦截时显示 409 原因）并对冷却记录发起豁免；看板页展示冷却中出菇室总数与分菇房明细。
 
 ## 本地开发（可选）
 

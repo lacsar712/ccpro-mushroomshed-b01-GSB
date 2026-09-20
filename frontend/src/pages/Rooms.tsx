@@ -63,8 +63,43 @@ export default function Rooms() {
     }
   }
 
+  async function changeStatus(id: number, status: RoomStatus) {
+    setError('')
+    try {
+      await api(`/api/rooms/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      })
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '状态更新失败')
+      await load()
+    }
+  }
+
+  async function waive(cooldownId: number) {
+    const reason = prompt('豁免原因（去除空白后至少 4 个字）')
+    if (reason === null) return
+    setError('')
+    try {
+      await api(`/api/cooldowns/${cooldownId}/waive`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      })
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '豁免失败')
+    }
+  }
+
   function statusBadge(status: RoomStatus) {
     return `badge ${status}`
+  }
+
+  function fmtDT(s: string | null) {
+    if (!s) return '—'
+    const d = new Date(s)
+    return Number.isNaN(d.getTime()) ? s : d.toLocaleString()
   }
 
   return (
@@ -141,6 +176,7 @@ export default function Rooms() {
               <th>品种</th>
               <th>容量</th>
               <th>状态</th>
+              <th>冷却至 (coolUntil)</th>
               <th />
             </tr>
           </thead>
@@ -154,9 +190,28 @@ export default function Rooms() {
                   <td>{r.species}</td>
                   <td>{r.capacityBags}</td>
                   <td>
-                    <span class={statusBadge(r.status)}>{r.status}</span>
+                    <span class={statusBadge(r.status)}>{r.status}</span>{' '}
+                    {r.cooling && <span class="badge cooling">冷却中</span>}
                   </td>
+                  <td>{fmtDT(r.coolUntil)}</td>
                   <td>
+                    <select
+                      value={r.status}
+                      onChange={(e) =>
+                        changeStatus(r.id, e.currentTarget.value as RoomStatus)
+                      }
+                    >
+                      <For each={statuses}>{(s) => <option value={s}>{s}</option>}</For>
+                    </select>{' '}
+                    {r.cooling && r.cooldownId !== null && (
+                      <button
+                        type="button"
+                        class="btn ghost"
+                        onClick={() => waive(r.cooldownId!)}
+                      >
+                        豁免
+                      </button>
+                    )}{' '}
                     <button type="button" class="btn ghost" onClick={() => remove(r.id)}>
                       删除
                     </button>

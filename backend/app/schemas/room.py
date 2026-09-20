@@ -12,6 +12,10 @@ class RoomCreateSchema(Schema):
     status = fields.Str(required=True, validate=validate.OneOf(ROOM_STATUSES))
 
 
+class RoomStatusUpdateSchema(Schema):
+    status = fields.Str(required=True, validate=validate.OneOf(ROOM_STATUSES))
+
+
 class RoomOutSchema(Schema):
     id = fields.Int(dump_only=True)
     shed_id = fields.Int(data_key="shedId")

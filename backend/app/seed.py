@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta, timezone
 
 from app.auth import hash_password
+from app.cooling import cool_until_for
 from app.database import SessionLocal
 from app.models.climate_log import ClimateLog
+from app.models.cooldown import Cooldown
 from app.models.flush_harvest import FlushHarvest
 from app.models.room import Room
 from app.models.shed import Shed
@@ -77,6 +79,25 @@ def seed() -> None:
             db.flush()
 
             now = datetime.now(timezone.utc)
+            # 冷却示例：R-02 仍在冷却（未到 coolUntil），V-02 已过点
+            r2_left = now - timedelta(hours=12)
+            r4_left = now - timedelta(hours=60)
+            db.add_all(
+                [
+                    Cooldown(
+                        room_id=r2.id,
+                        left_at=r2_left,
+                        cool_until=cool_until_for(r2_left),
+                    ),
+                    Cooldown(
+                        room_id=r4.id,
+                        left_at=r4_left,
+                        cool_until=cool_until_for(r4_left),
+                    ),
+                ]
+            )
+            db.flush()
+
             db.add_all(
                 [
                     ClimateLog(
