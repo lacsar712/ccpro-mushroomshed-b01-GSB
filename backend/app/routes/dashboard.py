@@ -4,16 +4,18 @@ from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required
 from sqlalchemy import func
 
+from app.cooldown_service import cooling_summary, utcnow
 from app.database import SessionLocal
 from app.models.climate_log import ClimateLog
 from app.models.flush_harvest import FlushHarvest
 from app.models.room import Room
 from app.models.shed import Shed
-from app.schemas.dashboard import DashboardStatsSchema
+from app.schemas.dashboard import DashboardCoolingSchema, DashboardStatsSchema
 
 bp = Blueprint("dashboard", __name__, url_prefix="/api/dashboard")
 
 stats_schema = DashboardStatsSchema()
+cooling_schema = DashboardCoolingSchema()
 
 
 @bp.get("/stats")
@@ -45,5 +47,27 @@ def get_stats():
             "harvest_kg_last_7d": float(harvest_kg_last_7d),
         }
         return jsonify(stats_schema.dump(payload))
+    finally:
+        db.close()
+
+
+@bp.get("/cooling")
+@jwt_required()
+def get_cooling():
+    db = SessionLocal()
+    try:
+        now = utcnow()
+        summary = cooling_summary(db, now=now)
+        sheds = db.query(Shed).order_by(Shed.id).all()
+        by_shed = [
+            {
+                "shed_id": shed.id,
+                "shed_name": shed.name,
+                "cooling": summary["by_shed"].get(shed.id, 0),
+            }
+            for shed in sheds
+        ]
+        payload = {"total": summary["total"], "by_shed": by_shed}
+        return jsonify(cooling_schema.dump(payload))
     finally:
         db.close()

@@ -15,6 +15,8 @@ export interface Room {
   species: string
   capacityBags: number
   status: RoomStatus
+  coolUntil?: string | null
+  cooling: boolean
 }
 
 export interface ClimateLog {
@@ -42,4 +44,15 @@ export interface DashboardStats {
   fruitingRoomCount: number
   climateLast24h: number
   harvestKgLast7d: number
+}
+
+export interface ShedCooling {
+  shedId: number
+  shedName: string
+  cooling: number
+}
+
+export interface DashboardCooling {
+  total: number
+  byShed: ShedCooling[]
 }

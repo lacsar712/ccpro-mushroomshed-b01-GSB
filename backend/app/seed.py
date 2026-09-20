@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 from app.auth import hash_password
+from app.cooldown_service import open_cooldown
 from app.database import SessionLocal
 from app.models.climate_log import ClimateLog
 from app.models.flush_harvest import FlushHarvest
@@ -135,6 +136,10 @@ def seed() -> None:
                         grade="A",
                         operator_name="出菇员",
                     ),
+                    # R-02 离开 fruiting 12 小时，仍在 36 小时冷却中
+                    open_cooldown(r2.id, left_at=now - timedelta(hours=12)),
+                    # V-02 离开 fruiting 已 48 小时，冷却点（36 小时）已过
+                    open_cooldown(r4.id, left_at=now - timedelta(hours=48)),
                 ]
             )
             db.commit()

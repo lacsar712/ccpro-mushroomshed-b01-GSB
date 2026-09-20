@@ -45,11 +45,19 @@ docker compose up --build
 1. **Auth**：JWT 登录（OAuth2 表单或 JSON），`/api/auth/login`、`/api/auth/me`，`Authorization: Bearer`
 2. **Shed 菇房**：`name`、`location`、`notes`
 3. **Room 出菇室**：`shedId`、`roomCode`、`species`、`capacityBags`、`status(fruiting|idle|sanitize)`；同菇房 `roomCode` 唯一
-4. **ClimateLog 环境记录**：`roomId`、`recordedAt`、`tempC`、`humidityPct`、`co2Ppm`、`notes`；`humidityPct ∈ [1,100]`，否则 **400**
-5. **FlushHarvest 采收**：`roomId`、`harvestedAt`、`flushNo(≥1)`、`weightKg`、`grade(A|B|C)`、`operatorName`；`weightKg > 0`，否则 **400**
-6. **Dashboard**：`shedTotal`、`fruitingRoomCount`、`climateLast24h`、`harvestKgLast7d`
+   - 离开 `fruiting`（`PATCH /api/rooms/:id/status`）时自动登记一条 **Cooldown 冷却记录**，`coolUntil = leftAt + 36 小时`
+   - 冷却未到点且未豁免时，把 status 写回 `fruiting` 返回 **409**（正文带 `coolUntil`），status 保持不变
+   - `GET /api/rooms` 每行带 `coolUntil` 与 `cooling`（`cooling=true` 表示未到点且未豁免）
+4. **Cooldown 冷却与豁免**：字段 `roomId`、`leftAt`、`coolUntil`、`waivedAt?`、`waiveReason?`
+   - 冷却时长 **36 小时**；豁免（waive）**仅 admin** 可操作：`POST /api/cooldowns/:id/waive`，`reason` 去掉空白后至少 4 个字，否则 **400**；fruiter 调用返回 **403**
+   - `GET /api/dashboard/cooling` 返回 `total`（冷却中室数）与 `byShed`（各菇房冷却中室数），两者由同一份判定一次性算出
+5. **ClimateLog 环境记录**：`roomId`、`recordedAt`、`tempC`、`humidityPct`、`co2Ppm`、`notes`；`humidityPct ∈ [1,100]`，否则 **400**
+6. **FlushHarvest 采收**：`roomId`、`harvestedAt`、`flushNo(≥1)`、`weightKg`、`grade(A|B|C)`、`operatorName`；`weightKg > 0`，否则 **400**
+7. **Dashboard**：`shedTotal`、`fruitingRoomCount`、`climateLast24h`、`harvestKgLast7d`，另见 `/api/dashboard/cooling`
 
-各实体 API：`GET/POST` 列表与创建、`DELETE` 按 ID 删除。
+各实体 API：`GET/POST` 列表与创建、`DELETE` 按 ID 删除。Room 另支持 `PATCH /api/rooms/:id/status` 修改房态。
+
+种子数据中 R-02 仍在冷却（离开 fruiting 12 小时），V-02 冷却点已过（离开 48 小时，36 小时冷却已结束）。
 
 ## 前端页面
 

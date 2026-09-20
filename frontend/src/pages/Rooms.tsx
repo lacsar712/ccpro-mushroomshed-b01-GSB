@@ -67,6 +67,11 @@ export default function Rooms() {
     return `badge ${status}`
   }
 
+  function formatCoolUntil(value?: string | null) {
+    if (!value) return '—'
+    return new Date(value).toLocaleString('zh-CN', { hour12: false })
+  }
+
   return (
     <div>
       <header class="page-header">
@@ -141,6 +146,7 @@ export default function Rooms() {
               <th>品种</th>
               <th>容量</th>
               <th>状态</th>
+              <th>冷却至</th>
               <th />
             </tr>
           </thead>
@@ -155,6 +161,18 @@ export default function Rooms() {
                   <td>{r.capacityBags}</td>
                   <td>
                     <span class={statusBadge(r.status)}>{r.status}</span>
+                    {r.cooling && (
+                      <span class="badge cooling" style={{ 'margin-left': '6px' }}>
+                        冷却中
+                      </span>
+                    )}
+                  </td>
+                  <td>
+                    {r.coolUntil ? (
+                      <span class={r.cooling ? '' : 'muted'}>{formatCoolUntil(r.coolUntil)}</span>
+                    ) : (
+                      '—'
+                    )}
                   </td>
                   <td>
                     <button type="button" class="btn ghost" onClick={() => remove(r.id)}>
